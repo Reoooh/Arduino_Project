@@ -1,0 +1,13 @@
+int E18Pin=2;
+ 
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  pinMode(E18Pin,INPUT_PULLUP);
+}
+ 
+void loop() {
+  // put your main code here, to run repeatedly:
+  Serial.println(digitalRead(E18Pin));
+  delay(1);
+}
