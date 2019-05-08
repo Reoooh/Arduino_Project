@@ -1,0 +1,21 @@
+<html>
+<body>
+<pre>
+<h1>µVision3 Build Log</h1>
+<h2>Project:</h2>
+G:\keil\gy\GY33\GYTCS3414\gy33\C51\c51_iic\user\c51_iic.uv2
+Project File Date:  04/01/2016
+
+<h2>Output:</h2>
+Build target 'c51_iic'
+compiling usart.c...
+compiling stc_it.c...
+compiling iic.c...
+..\PERIPHERALS\SRC\IIC.C(2): warning C280: 'x': unreferenced local variable
+compiling main.c...
+MAIN.C(61): warning C182: pointer to different objects
+MAIN.C(71): warning C182: pointer to different objects
+linking...
+Program Size: data=72.0 xdata=0 code=2109
+creating hex file from "..\output\c51_iic"...
+"..\output\c51_iic" - 0 Error(s), 3 Warning(s).
