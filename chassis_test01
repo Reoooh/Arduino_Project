@@ -1,0 +1,361 @@
+#include <i2cmaster.h>
+
+/*
+VCC----VCC//颜色传感器
+CT----A5
+DR----A4
+GND--GND
+S0---GND
+
+串口指令 
+   显示颜色传感器信息:a/b---开/关
+   显示超声波传感器信息:x/r---开/关
+串口通信
+TX-----RX
+RX-----TX
+
+col 
+8 ->白
+80->蓝
+10->绿
+*/
+
+#define uint16_t unsigned int
+
+typedef struct{
+    uint16_t Red;
+    uint16_t Green;
+    uint16_t Blue;
+    uint16_t Clear;
+} RGB;
+unsigned char Re_buf;
+unsigned char sign=0;
+RGB rgb;
+uint16_t CT=0,Lux=0;
+byte color=0,rgb_data[3]={0};
+
+//超声波
+int trigPinA = 8; 
+int echoPinA = 9;
+int trigPinB = 10; 
+int echoPinB = 11; 
+float durationA, cmA;
+float durationB, cmB;
+unsigned char Re_UA;
+
+int Track = 12;
+
+int E18Pin = 13;
+
+//L298N驱动引脚
+int ENA=5;
+int ENB=6;
+int IN1=2;
+int IN2=3;
+int IN3=4;
+int IN4=7; 
+
+
+void setup() {  
+  Serial.begin(115200);
+  i2c_init();
+  delay(1); 
+  for(int i=2;i<8;i++){
+  pinMode(i,OUTPUT);
+  }
+  pinMode(trigPinA, OUTPUT);
+  pinMode(echoPinA, INPUT);
+  pinMode(trigPinB, OUTPUT);
+  pinMode(echoPinB, INPUT);
+
+  pinMode(Track, INPUT);
+  pinMode(E18Pin, INPUT);
+}
+
+void loop(){
+  int col = Color_sensor();
+  int Infrared_sensor = digitalRead(E18Pin);
+
+//  if(Infrared_sensor == 0){
+//    stopcar();
+//    switch(col){
+//      case 80 :Serial.print("80"); break;//Manipulator_B
+//      case 10 :Serial.print("10"); break;//Manipulator_G
+//      default : delay(3000);
+//    }
+//  }
+//  else{
+//    movecar();
+//  }
+  movecar();
+  delay(100);
+}
+  
+int Color_sensor(){//颜色传感器-读取
+  unsigned char data[9]={0};
+  if(!sign){//向串口输出RBG,大概
+    iic_read(0x00,data,8);
+    rgb.Red=(data[0]<<8)|data[1];
+    rgb.Green=(data[2]<<8)|data[3];
+    rgb.Blue=(data[4]<<8)|data[5];
+    rgb.Clear=(data[6]<<8)|data[7];
+    Serial.print("Red: ");
+    Serial.println(rgb.Red);
+    Serial.print("Green: ");
+    Serial.println( rgb.Green);
+    Serial.print("Blue");
+    Serial.println( rgb.Blue);
+    Serial.print("Clear");
+    Serial.println(rgb.Clear);
+    iic_read(0x08,data,4);
+    Lux=(data[0]<<8)|data[1];
+    CT=(data[2]<<8)|data[3];
+   
+    Serial.print("CT:");
+    Serial.println(CT);
+    Serial.print(",Lux:");
+    Serial.println( Lux);
+    iic_read(0x0c,data,3);
+    rgb_data[0]=data[0];
+    rgb_data[1]=data[1];
+    rgb_data[2]=data[2];
+    Serial.print("r:");
+    Serial.println( rgb_data[0]);
+    Serial.print(",g:"); 
+    Serial.println( rgb_data[1]);
+    Serial.print(",b:"); 
+    Serial.println( rgb_data[2]);
+    iic_read(0x0f,data,1); 
+    color=data[0];
+    Serial.print(",color:"); 
+    Serial.println( color,HEX);
+  }
+  if(sign==1){
+    iic_read(0x10,&data[8],1);
+    i2c_start_wait(0xb4);
+    i2c_write(0x10);
+    i2c_write(0x31);
+   // i2c_write((data[8]|0x01));
+    i2c_stop();
+    sign=3;
+  } 
+  delay(50); 
+  return color;
+
+}
+
+void iic_read(unsigned char add,unsigned char *data,unsigned char len){//颜色传感器-读取传感器信息
+  i2c_start_wait(0xb4);
+  i2c_write(add);
+  i2c_start_wait(0xb5);
+  while(len-1){
+    *data++=i2c_readAck();
+    len--;
+  }
+  *data=i2c_readNak();
+  i2c_stop();
+}
+
+void serialEvent() {//颜色传感器-显示RGB值开关
+  while (Serial.available()) {   
+    Re_buf=(unsigned char)Serial.read();
+    if (Re_buf=='a')
+      sign=0;
+    if (Re_buf=='b')    
+      sign=1; 
+      Re_buf=0; 
+  }
+}
+
+float Ultrasonic_sensor_A(){//A超 
+  digitalWrite(trigPinA, LOW); 
+  delayMicroseconds(2);   
+  digitalWrite(trigPinA,HIGH); 
+  delayMicroseconds(10);    
+  digitalWrite(trigPinA, LOW); 
+  
+  durationA = float(pulseIn(echoPinA, HIGH)); 
+  
+  cmA =  (durationA/2) / 29.1; 
+  
+  Serial.print("durationA =");
+  Serial.print(durationA);
+  Serial.print(" ,cmA = ");
+  Serial.print(cmA);
+  Serial.println("cm");
+  
+  delay(50);
+  return cmA;
+
+}
+
+float Ultrasonic_sensor_B(){//B超
+  digitalWrite(trigPinB, LOW); 
+  delayMicroseconds(2);    
+  digitalWrite(trigPinB,HIGH); 
+  delayMicroseconds(10);    
+  digitalWrite(trigPinB, LOW);
+  
+  durationB = float(pulseIn(echoPinB, HIGH)); 
+ 
+  
+  cmB =  (durationB/2) / 29.1; 
+
+  Serial.print("durationB =");
+  Serial.print(durationB);
+  Serial.print(" ,cmB = ");
+  Serial.print(cmB);
+  Serial.println("cm");
+
+  delay(50);
+  return cmB;
+ 
+}
+
+//void movecar(){
+//  float disA = Ultrasonic_sensor_A();
+//  float disB = Ultrasonic_sensor_B();
+//  float ave = (disA + disB)/2;
+//  
+//  int Tracking_sensor = digitalRead(Track);
+//    if(Tracking_sensor == 0){//左侧撞墙
+//      //stopcar();
+//      turnback();
+//      delay(500);
+//    
+//      analogWrite(ENA,255);
+//      analogWrite(ENB,255);
+//      digitalWrite(IN1,HIGH);
+//      digitalWrite(IN2,LOW);
+//      digitalWrite(IN3,LOW);
+//      digitalWrite(IN4,HIGH);
+//      delay(500);
+//      forward();
+//      delay(200);
+//    }
+//    else{
+//      if(ave > 10){//过远
+//        if(disA > disB){//车头向外(右)
+//        // stopcar();
+//        // delay(100);
+//        turnleft();
+//        delay(500);
+//        // forward();
+//        // delay(100);
+//      }
+//      /*else{//车头向内(左)
+//        turnright();
+//        delay(50);
+//        forward();
+//        delay(100);
+//      }*/
+//    }
+//    if(ave < 5){//过近
+//      if(disA < disB){//车头向内(左)
+//        // stopcar();
+//        // delay(100);
+//        turnright();
+//        delay(500);
+//        // forward();
+//        //  delay(100);
+//      }
+//      /* else{//车头向外(右)
+//        forward();
+//        delay(100);
+//      }*/
+//    }
+//  }
+//  forward();
+//}
+
+void movecar(){
+  float disA = Ultrasonic_sensor_A();
+  float disB = Ultrasonic_sensor_B();
+  float ave = (disA + disB)/2;
+  
+  int Tracking_sensor = digitalRead(Track);
+  if(Tracking_sensor == 0){//左侧撞墙
+    //stopcar();
+    turnback();
+    delay(500);
+    turnright();
+    delay(500);
+//    analogWrite(ENA,255);
+//    analogWrite(ENB,255);
+//    digitalWrite(IN1,HIGH);
+//    digitalWrite(IN2,LOW);
+//    digitalWrite(IN3,LOW);
+//    digitalWrite(IN4,HIGH);
+//    delay(500);
+    forward();
+    delay(300);
+//    break;
+  }
+  else{
+    if(disA > 10){
+      if(disA > disB){
+        turnleft();
+        delay(100);
+      }
+      else{
+        forward();
+        delay(100);
+      }
+    }
+    else if(disA < 5){
+      if(disA < disB){
+        turnright();
+        delay(500);
+      }
+      else{
+        forward();
+        delay(100);
+      }
+    }
+    else{
+      forward();
+      delay(100);
+    }
+  }         
+}
+
+void forward(){
+  analogWrite(ENA,255);
+  analogWrite(ENB,255);
+  digitalWrite(IN1,HIGH);
+  digitalWrite(IN2,LOW);
+  digitalWrite(IN3,HIGH);
+  digitalWrite(IN4,LOW);
+}
+void turnback(){
+  analogWrite(ENA,255);
+  analogWrite(ENB,255);
+  digitalWrite(IN1,LOW);
+  digitalWrite(IN2,HIGH);
+  digitalWrite(IN3,LOW);
+  digitalWrite(IN4,HIGH);
+}
+void turnleft(){
+  analogWrite(ENA,0);
+  analogWrite(ENB,255);
+  digitalWrite(IN1,LOW);
+  digitalWrite(IN2,LOW);
+  digitalWrite(IN3,HIGH);
+  digitalWrite(IN4,LOW);
+}
+void turnright(){
+  analogWrite(ENA,255);
+  analogWrite(ENB,0);
+  digitalWrite(IN1,HIGH);
+  digitalWrite(IN2,LOW);
+  digitalWrite(IN3,LOW);
+  digitalWrite(IN4,LOW);
+}
+void stopcar(){
+  analogWrite(ENA,0);
+  analogWrite(ENB,0);
+  digitalWrite(IN1,LOW);
+  digitalWrite(IN2,LOW);
+  digitalWrite(IN3,LOW);
+  digitalWrite(IN4,LOW);
+}
