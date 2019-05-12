@@ -1,0 +1,503 @@
+//#include <Adafruit_CircuitPlayground.h>
+//#include <Adafruit_Circuit_Playground.h>
+
+/*  初始状态
+r=100;
+f=20;
+c=145夹紧
+c=25最大
+
+弹夹舵机广角向前(参照车身),中点正对前方
+       蓝
+    绿  ↑  蓝
+       绿
+*/
+
+#include <Servo.h>
+
+Servo base, fArm, rArm, claw ,danjia;//创建5个servo对象
+//存储电机极限值(const指定该数值为常量,常量数值在程序运行中不能改变)
+
+int DSD = 15; //Default Servo Delay (默认电机运动延迟时间)
+              //此变量用于控制电机运行速度.增大此变量数值将
+              //降低电机运行速度从而控制机械臂动作速度
+              
+const int baseMin = 0;
+const int baseMax = 180;
+const int rArmMin = 0;
+const int rArmMax = 180;
+const int fArmMin = 0;
+const int fArmMax = 180;
+const int clawMin = 0;
+const int clawMax = 180;
+const int danjiaMin = 0;
+const int danjiaMax = 360;
+//传感器
+
+const int E18A =5 ;//光电传感器-寻找标志物
+const int E18B =2 ;//光电传感器-寻找树坑
+
+//TCS230连接设置 
+const int s0 = A2; 
+const int s1 =A3; 
+const int s2 = A1; 
+const int s3 = A0; 
+const int out = A5; 
+
+// Variables 
+int red = 0; 
+int green = 0; 
+int blue = 0; 
+
+int B=0;//颜色计数器
+int G=0;
+  
+void setup() { 
+ Serial.begin(9600); 
+ pinMode(s0, OUTPUT); 
+ pinMode(s1, OUTPUT); 
+ pinMode(s2, OUTPUT); 
+ pinMode(s3, OUTPUT); 
+ pinMode(out, INPUT); 
+
+ digitalWrite(s0, HIGH); 
+ digitalWrite(s1, HIGH); 
+ 
+  pinMode(E18A,INPUT);
+  pinMode(E18B,INPUT);
+  
+  base.attach(11);     // base 伺服舵机连接引脚11 舵机代号'b'
+  delay(200);          // 稳定性等待
+  rArm.attach(10);     // rArm 伺服舵机连接引脚10 舵机代号'r'
+  delay(200);          // 稳定性等待
+  fArm.attach(9);      // fArm 伺服舵机连接引脚9  舵机代号'f'
+  delay(200);          // 稳定性等待
+  claw.attach(6);      // claw 伺服舵机连接引脚6  舵机代号'c'
+  delay(200);          // 稳定性等待
+  
+  
+  base.write(90); 
+  delay(10);
+  fArm.write(110); 
+  delay(10);
+  rArm.write(45); 
+  delay(10);
+  claw.write(55);  
+  delay(10); 
+  
+  Serial.println("欢迎来到中二的世界");
+}
+
+
+void loop() {
+
+ Serial.println("开始进入loop循环");
+ delay(300);
+ color(); 
+ delay(50);   
+ Serial.print("R:"); 
+ Serial.print(red, DEC); 
+ Serial.print(" G: "); 
+ Serial.print(green, DEC); 
+ Serial.print(" B: "); 
+ Serial.println(blue, DEC); 
+
+ Original();
+
+ 
+ int Infrared_sensor_H = digitalRead(E18A); 
+  
+ int Infrared_sensor = digitalRead(E18B);
+  
+  //if(Infrared_sensor_H == 0 ){
+   // Serial.println("检测到高端标识物");
+    if(blue < red && blue < green){//蓝色
+      Serial.println("检测到蓝色"); 
+      if(Infrared_sensor_H == 0 ){
+        Serial.println("检测到高端标识物");
+        gettree_B();}
+
+      else if(Infrared_sensor == 0 ){
+        Serial.println("检测到树坑");
+        puttree_B();
+      }
+    }
+    else if (green < red && green < blue) {
+       Serial.println("检测到绿色"); 
+     
+       if(Infrared_sensor_H == 0 ){
+         Serial.println("检测到高端标识物");
+         gettree_G();}
+       else  if(Infrared_sensor == 0 ){
+         Serial.println("检测到树坑");
+         puttree_G();
+       }
+     }
+    else
+      Serial.println("未知颜色");
+      delay(3000);
+  
+}
+
+ 
+/*串口控制----------------------------*/
+
+void Original(){//设置为初始状态
+
+  base.write(90);
+  delay(20);
+  claw.write(55);
+  delay(20);
+  fArm.write(110);
+  delay(20);
+  rArm.write(45);
+  delay(20);
+}
+
+
+void gettree_B(){
+       //抓蓝1（50） 
+       Serial.println("开始抓取蓝树");
+       rArm.write(45);
+        delay(20);
+        fArm.write(0);
+        delay(1000);
+        claw.write(128);
+        delay(1000);
+        fArm.write(100);
+        delay(1000);
+        if(B==0){ base.write(50);//蓝色储存槽位置1
+        Serial.println("蓝洞1");}
+        if(B==1){ base.write(70);//蓝色储存槽位置2
+        Serial.println("蓝洞2");
+        }
+        delay(1000);
+        fArm.write(180);
+        claw.write(55);
+        delay(1000);
+        B++;
+
+         Original();
+
+        Serial.println("结束抓取蓝树");
+       
+/*   //抓蓝2
+         rArm.write(45);
+        delay(20);
+        fArm.write(0);
+        delay(1000);
+        claw.write(128);
+        delay(1000);
+        fArm.write(100);
+        delay(1000);
+        
+        base.write(65
+        );
+        delay(1000);
+        fArm.write(180);
+        claw.write(55);
+        delay(1000);
+        
+        
+        
+        
+
+        
+     // 结束抓取物品
+     
+     
+ */       
+        
+}
+void gettree_G(){
+    //抓绿1（100）
+     Serial.println("开始抓取绿树");
+    rArm.write(45);
+        delay(20);
+        fArm.write(0);
+        delay(1000);
+        claw.write(128);
+        delay(1000);
+        fArm.write(100);
+        delay(1000);
+        if(G==0){base.write(100);//绿色储存槽位置1
+        Serial.println("绿洞1");
+        }
+        if(G==1){base.write(110);//绿色储存槽位置2
+        Serial.println("绿洞2");
+        }
+        fArm.write(180);
+        delay(1000);      
+        claw.write(55);
+         delay (500);
+        rArm.write(150);
+        G++;
+         // 结束抓取物品
+          Original();
+        // 返回初始状态
+ Serial.println("结束抓取绿树");
+         
+       //
+         
+   /*   //抓绿（145）
+      rArm.write(45);
+        delay(20);
+         fArm.write(0);
+        delay(1000);
+        claw.write(128);
+        delay(1000);
+        fArm.write(100);
+        delay(1000);
+        base.write(145);
+        delay(1000);
+        fArm.write(180);
+        delay(1000);
+        claw.write(55);
+        delay (500);
+        rArm.write(150);
+       
+
+         // 结束抓取物品
+       
+        Original();
+        // 返回初始状态
+
+*/
+}
+void puttree_B(){
+      //取出蓝1
+       Serial.println("开始放回蓝树");
+      if(B==2){ base.write(50);//蓝色储存槽位置1
+      Serial.println("蓝洞1");
+      }
+      if(B==1){ base.write(70);//蓝色储存槽位置2
+      Serial.println("蓝洞2");
+      }
+       delay(1000);
+       rArm.write(180);
+        delay(1000);
+       fArm.write(180);
+        delay(1000);
+       rArm.write(45);
+        delay(1000);
+       claw.write(128);
+        delay(1000);
+       fArm.write(130);
+        delay(1000);
+       base.write(90);
+        delay(1000);
+       fArm.write(0);
+        delay(1000);
+       claw.write(55);
+        delay(1000);
+        B--;
+        Original(); 
+ Serial.println("结束放回蓝树");
+    /*    //取出蓝2
+        base.write(65);
+       delay(1000);
+       rArm.write(180);
+        delay(1000);
+       fArm.write(180);
+        delay(1000);
+       rArm.write(45);
+        delay(1000);
+       claw.write(128);
+        delay(1000);
+       fArm.write(130);
+        delay(1000);
+       base.write(90);
+        delay(1000);
+       fArm.write(0);
+        delay(1000);
+       claw.write(55);
+        delay(1000);
+
+*/        
+}
+void puttree_G(){
+   Serial.println("开始放回绿树");
+       if(G==2){base.write(100);//绿色储存槽位置1
+       Serial.println("绿洞1");
+       }
+       if(G==1){base.write(110);//绿色储存槽位置2
+       Serial.println("绿洞2");
+       }
+       delay(1000);
+       rArm.write(180);
+        delay(1000);
+       fArm.write(180);
+        delay(1000);
+       rArm.write(45);
+        delay(1000);
+       claw.write(128);
+        delay(1000);
+       fArm.write(130);
+        delay(1000);
+       base.write(90);
+        delay(1000);
+       fArm.write(0);
+        delay(1000);
+       claw.write(55);
+        delay(1000);
+        G--;
+        Original(); 
+         Serial.println("结束放回绿树");
+/*
+       base.write(145);
+       delay(1000);
+       rArm.write(180);
+        delay(1000);
+       fArm.write(180);
+        delay(1000);
+       rArm.write(45);
+        delay(1000);
+       claw.write(128);
+        delay(1000);
+       fArm.write(130);
+        delay(1000);
+       base.write(90);
+        delay(1000);
+       fArm.write(0);
+        delay(1000);
+       claw.write(55);
+        delay(1000);
+*/
+  Original();//恢复初始化
+  
+}
+
+void color() 
+{ 
+ digitalWrite(s2, LOW); 
+ digitalWrite(s3, LOW); 
+ //count OUT, pRed, RED 
+ red = pulseIn(out, digitalRead(out) == HIGH ? LOW : HIGH); 
+ digitalWrite(s3, HIGH); 
+ //count OUT, pBLUE, BLUE 
+ blue = pulseIn(out, digitalRead(out) == HIGH ? LOW : HIGH); 
+ digitalWrite(s2, HIGH); 
+ //count OUT, pGreen, GREEN 
+ green = pulseIn(out, digitalRead(out) == HIGH ? LOW : HIGH); 
+}
+
+
+/*串口命令集-----------------------------------------------------------------------*/
+void armDataCmd(char serialCmd){ //Arduino根据串行指令执行相应操作
+                                 //指令示例：b45 底盘转到45度角度位置
+                                 //          o 输出机械臂舵机状态信息
+  if (serialCmd == 'b' || serialCmd == 'c' || serialCmd == 'f' || serialCmd == 'r'){
+    int servoData = Serial.parseInt();
+    servoCmd(serialCmd, servoData, DSD);  // 机械臂舵机运行函数（参数：舵机名，目标角度，延迟/速度）
+  } else {
+    switch(serialCmd){    
+      case 'o':  // 输出舵机状态信息
+        reportStatus();
+        break;
+ 
+      case 'i':
+        armIniPos();  
+        break;
+         
+      default:  //未知指令反馈
+        Serial.println("Unknown Command.");
+    }
+  }  
+}
+void servoCmd(char servoName, int toPos, int servoDelay){  
+  Servo servo2go;  //创建servo对象
+ 
+  //串口监视器输出接收指令信息
+  Serial.println("");
+  Serial.print("+Command: Servo ");
+  Serial.print(servoName);
+  Serial.print(" to ");
+  Serial.print(toPos);
+  Serial.print(" at servoDelay value ");
+  Serial.print(servoDelay);
+  Serial.println(".");
+  Serial.println("");  
+  
+  int fromPos; //建立变量，存储电机起始运动角度值
+  
+  switch(servoName){
+    case 'b':
+      if(toPos >= baseMin && toPos <= baseMax){
+        servo2go = base;
+        fromPos = base.read();  // 获取当前电机角度值用于“电机运动起始角度值”
+        break;
+      } else {
+        Serial.println("+Warning: Base Servo Value Out Of Limit!");
+        return;
+      }
+ 
+    case 'c':
+      if(toPos >= clawMin && toPos <= clawMax){    
+        servo2go = claw;
+        fromPos = claw.read();  // 获取当前电机角度值用于“电机运动起始角度值”
+        break;
+      } else {
+        Serial.println("+Warning: Claw Servo Value Out Of Limit!");
+        return;        
+      }
+ 
+    case 'f':
+      if(toPos >= fArmMin && toPos <= fArmMax){
+        servo2go = fArm;
+        fromPos = fArm.read();  // 获取当前电机角度值用于“电机运动起始角度值”
+        break;
+      } else {
+        Serial.println("+Warning: fArm Servo Value Out Of Limit!");
+        return;
+      }
+         
+    case 'r':
+      if(toPos >= rArmMin && toPos <= rArmMax){
+        servo2go = rArm;
+        fromPos = rArm.read();  // 获取当前电机角度值用于“电机运动起始角度值”
+        break;
+      } else {
+        Serial.println("+Warning: rArm Servo Value Out Of Limit!");
+        return;
+      }      
+  }
+ 
+  //指挥电机运行
+  if (fromPos <= toPos){  //如果“起始角度值”小于“目标角度值”
+    for (int i=fromPos; i<=toPos; i++){
+      servo2go.write(i);
+      delay (servoDelay);
+    }
+  }  else { //否则“起始角度值”大于“目标角度值”
+    for (int i=fromPos; i>=toPos; i--){
+      servo2go.write(i);
+      delay (servoDelay);
+    }
+  }
+}
+ 
+void reportStatus(){  //舵机状态信息
+  Serial.println("");
+  Serial.println("");
+  Serial.println("+ Robot-Arm Status Report +");
+  Serial.print("Claw Position: "); Serial.println(claw.read());
+  Serial.print("Base Position: "); Serial.println(base.read());
+  Serial.print("Rear  Arm Position:"); Serial.println(rArm.read());
+  Serial.print("Front Arm Position:"); Serial.println(fArm.read());
+  Serial.println("++++++++++++++++++++++++++");
+  Serial.println("");
+}
+ 
+void armIniPos(){
+  Serial.println("+Command: Restore Initial Position.");
+  int robotIniPosArray[4][3] = {
+    {'b', 90, DSD},
+    {'r', 90, DSD},
+    {'f', 90, DSD},
+    {'c', 90, DSD} 
+  };   
+ 
+  for (int i = 0; i < 4; i++){
+    servoCmd(robotIniPosArray[i][0], robotIniPosArray[i][1], robotIniPosArray[i][2]);
+  }
+}
