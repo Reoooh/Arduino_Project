@@ -8,3 +8,4 @@ robot project by Arduino in 05/18/2019
 
 # the robot that we made
 ![TREErobot](https://github.com/Reoooh/Arduino-project/blob/master/robot_1.PNG)
+![TREErobot](https://github.com/Reoooh/Arduino-project/blob/master/robou_2.JPG)
