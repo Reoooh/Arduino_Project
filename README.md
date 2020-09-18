@@ -13,5 +13,5 @@ robot project by Arduino in 05/18/2019
 ## the robot
 ![robot](https://github.com/Reoooh/Arduino-project/blob/master/pic/robot_1.PNG)
 
-![robot](https://github.com/Reoooh/Arduino-project/blob/master/pic/robot_2.PNG)
+![robot](https://github.com/Reoooh/Arduino-project/blob/master/pic/robot_2.JPG)
 
